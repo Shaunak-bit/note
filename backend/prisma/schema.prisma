@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model item {
+  id          Int         @id @default(autoincrement())
+  title       String
+  status      item_status @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  description String?
+  userId      Int
+
+  user user @relation(fields: [userId], references: [id]) 
+
+  @@index([userId])
+}
+
+model user {
+  id                 Int      @id @default(autoincrement())
+  email              String   @unique(map: "User_email_key")
+  name               String
+  password           String
+  emailNotifications Boolean  @default(false)
+  pushNotifications  Boolean  @default(false)
+  weeklyDigest       Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt  
+
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  refreshToken       String? @db.Text
+
+  items item[]
+}
+
+enum item_status {
+  PENDING
+  COMPLETED
+}

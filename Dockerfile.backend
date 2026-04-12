@@ -1,0 +1,42 @@
+# Stage 1: Build
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+# Add build tools needed for native modules like bcrypt
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY backend/package*.json ./
+RUN npm install
+
+# Copy Prisma schema and generate client
+COPY backend/prisma ./prisma/
+RUN npx prisma generate
+
+# Copy source and build
+COPY backend/ .
+RUN npm run build
+
+# Stage 2: Production
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Copy package files (for reference)
+COPY backend/package*.json ./
+
+# Copy node_modules from builder (already compiled, includes bcrypt)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy Prisma generated client
+COPY --from=builder /app/src/generated ./dist/generated
+COPY --from=builder /app/src/generated ./src/generated
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Copy compiled code and prisma schema
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+EXPOSE 5000
+
+CMD ["npm", "run", "start"]
