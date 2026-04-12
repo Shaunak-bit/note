@@ -1,6 +1,8 @@
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 export const loginUsers = async (email: string, password: string) => {
     try {
-        const res = await fetch("http://localhost:5000/auth/signin", {
+        const res = await fetch(`${BASE_URL}/auth/signin`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -32,7 +34,7 @@ export const loginUsers = async (email: string, password: string) => {
 
 export const signupUsers = async (name: string, email: string, password: string) => {
     try {
-        const res = await fetch("http://localhost:5000/auth/signup", {
+        const res = await fetch(`${BASE_URL}/auth/signup`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -65,7 +67,7 @@ export const signupUsers = async (name: string, email: string, password: string)
 
 export const getProfile = async () => {
     try {
-        const res = await fetch("http://localhost:5000/auth/profile", {
+        const res = await fetch(`${BASE_URL}/auth/profile`, {
             method: "GET",
             credentials: "include"
         });
@@ -86,7 +88,7 @@ export const getProfile = async () => {
 
 export const logoutUser = async () => {
     try {
-        const res = await fetch("http://localhost:5000/auth/logout", {
+        const res = await fetch(`${BASE_URL}/auth/logout`, {
             method: "POST",
             credentials: "include"
         })
@@ -106,7 +108,7 @@ export const logoutUser = async () => {
 
 export const createItem = async (title: string, description: string, status: "PENDING" | "COMPLETED") => {
     try {
-        const res = await fetch("http://localhost:5000/items", {
+        const res = await fetch(`${BASE_URL}/items`, {
             method: "POST",
             credentials: "include",
             headers: {
@@ -155,8 +157,7 @@ export const createItem = async (title: string, description: string, status: "PE
 
 export const getItems = async () => {
     try {
-
-        const res = await fetch("http://localhost:5000/items", {
+        const res = await fetch(`${BASE_URL}/items`, {
             method: "GET",
             credentials: "include"
         });
@@ -166,7 +167,6 @@ export const getItems = async () => {
         if (!res.ok) {
             throw new Error(result.message || "Failed to fetch items");
         }
-
 
         const transformedItems = result.data.map((item: any) => ({
             id: item.id,
@@ -199,7 +199,7 @@ export const getItems = async () => {
 
 export const deleteItem = async (id: number) => {
     try {
-        const res = await fetch(`http://localhost:5000/items/${id}`, {
+        const res = await fetch(`${BASE_URL}/items/${id}`, {
             method: "DELETE",
             credentials: "include"
         });
@@ -224,7 +224,7 @@ export const deleteItem = async (id: number) => {
 
 export const updateItem = async (id: number, status: string) => {
     try {
-        const res = await fetch(`http://localhost:5000/items/${id}`, {
+        const res = await fetch(`${BASE_URL}/items/${id}`, {
             method: "PATCH",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -267,7 +267,7 @@ export const updateItem = async (id: number, status: string) => {
 
 export const updateUsers = async (name: string, email: string) => {
     try {
-        const res = await fetch("http://localhost:5000/auth/profile", {
+        const res = await fetch(`${BASE_URL}/auth/profile`, {
             method: "PATCH",
             credentials: "include",
             headers: {
@@ -296,7 +296,7 @@ export const updateSettings = async (data: {
     weeklyDigest?: boolean;
 }) => {
     try {
-        const res = await fetch("http://localhost:5000/settings", {
+        const res = await fetch(`${BASE_URL}/settings`, {
             method: "PATCH",
             credentials: "include",
             headers: {
@@ -317,9 +317,10 @@ export const updateSettings = async (data: {
         return { success: false, message: error.message || "Something went wrong" };
     }
 };
+
 export const getSettings = async () => {
     try {
-        const res = await fetch("http://localhost:5000/settings", {
+        const res = await fetch(`${BASE_URL}/settings`, {
             method: "GET",
             credentials: "include"
         })
@@ -337,7 +338,7 @@ export const getSettings = async () => {
 
 export const forgotPassword = async (email: string) => {
     try {
-        const res = await fetch("http://localhost:5000/auth/forgot-password", {
+        const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -367,7 +368,7 @@ export const forgotPassword = async (email: string) => {
 
 export const resetPassword = async (token: string, password: string) => {
     try {
-        const res = await fetch(`http://localhost:5000/auth/reset-password/${token}`, {
+        const res = await fetch(`${BASE_URL}/auth/reset-password/${token}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
