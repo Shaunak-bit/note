@@ -74,7 +74,7 @@ router.post("/", middleware, async (req: Request, res: Response) => {
               ${createdItem.title}
             </div>
 
-            <a href="http://localhost:3000/dashboard"
+            <a href="${process.env.FRONTEND_URL}/dashboard"
                style="display:block; margin:20px auto; width:fit-content;
                background:#f97316; color:white; padding:10px 20px;
                border-radius:6px; text-decoration:none;">
