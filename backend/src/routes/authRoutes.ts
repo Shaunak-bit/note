@@ -10,7 +10,13 @@ import { sendEmail } from "../lib/sendEmail";
 const router = express.Router();
 const auth = process.env.JWT_SECRET;
 
+const isProduction = process.env.NODE_ENV === "production";
 
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+};
 
 router.get("/profile", middleware, async (req: any, res: Response, next: NextFunction) => {
     try {
@@ -84,6 +90,7 @@ router.patch("/profile", middleware, async (req: Request, res: Response, next: N
         return res.status(500).json({ message: "Internal server error" })
     }
 })
+
 router.post("/signup", async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { name, email, password } = req.body;
@@ -115,6 +122,7 @@ router.post("/signup", async (req: Request, res: Response, next: NextFunction) =
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET not defined");
         }
+
         const accessToken = jwt.sign(verified, auth as string, {
             expiresIn: "15m"
         });
@@ -124,20 +132,16 @@ router.post("/signup", async (req: Request, res: Response, next: NextFunction) =
         });
 
         res.cookie("token", accessToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 1000 * 60 * 15
         });
 
         res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 1000 * 60 * 60 * 24 * 7
         });
 
-        const storeToken = await prisma.user.update({
+        await prisma.user.update({
             where: { id: newUser.id },
             data: { refreshToken }
         });
@@ -154,13 +158,15 @@ router.post("/signin", async (req: Request, res: Response, next: NextFunction) =
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ message: "All fields are requird" })
+            return res.status(400).json({ message: "All fields are required" })
         }
+
         const existingUser = await prisma.user.findUnique({ where: { email: email } })
 
         if (!existingUser) {
             return res.status(401).json({ message: "Invalid Credentials" })
         }
+
         const comparePassword = await bcrypt.compare(password, existingUser.password)
 
         if (!comparePassword) {
@@ -168,6 +174,7 @@ router.post("/signin", async (req: Request, res: Response, next: NextFunction) =
         }
 
         const verified = { id: existingUser.id, email: existingUser.email, name: existingUser.name }
+
         const accessToken = jwt.sign(verified, auth as string, {
             expiresIn: "15m"
         });
@@ -177,23 +184,20 @@ router.post("/signin", async (req: Request, res: Response, next: NextFunction) =
         });
 
         res.cookie("token", accessToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 1000 * 60 * 15
         });
 
         res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 1000 * 60 * 60 * 24 * 7
         });
 
-        const storeToken = await prisma.user.update({
+        await prisma.user.update({
             where: { id: existingUser.id },
             data: { refreshToken }
         });
+
         return res.status(200).json({ message: "User logged in successfully" })
     } catch (error) {
         console.log(error)
@@ -226,9 +230,7 @@ router.post("/refresh-token", async (req: Request, res: Response) => {
         );
 
         res.cookie("token", newAccessToken, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 1000 * 60 * 15
         });
 
@@ -250,17 +252,8 @@ router.post("/logout", middleware, async (req: Request, res: Response) => {
             });
         }
 
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax"
-        });
-
-        res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax"
-        });
+        res.clearCookie("token", cookieOptions);
+        res.clearCookie("refreshToken", cookieOptions);
 
         return res.status(200).json({
             message: "User logged out successfully"
@@ -286,6 +279,7 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
         if (typeof token !== 'string') {
             return res.status(400).json({ message: "Invalid token format" });
         }
+
         const hashedToken = crypto
             .createHash("sha256")
             .update(token)
@@ -362,7 +356,8 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
             }
         });
 
-        const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+        // ✅ Fixed: uses FRONTEND_URL env variable instead of hardcoded localhost
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
         await sendEmail(
             user.email,
@@ -382,4 +377,5 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
         });
     }
 });
+
 export default router;
