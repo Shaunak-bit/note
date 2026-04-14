@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Bell, Palette } from "lucide-react";
-import { updateSettings, getSettings } from "../lib/api";
+import { updateSettings, getSettings, updateUsers } from "../lib/api";
 
 type User = {
     id: number;
@@ -45,7 +45,15 @@ export function SettingsContent({
                 setError("Name and email cannot be empty.");
                 return;
             }
-            showSaved();
+
+            const res = await updateUsers(name, email); // ✅ actually call the API
+            if (res.success) {
+                setUser(res.data);  // ✅ update parent state so header also reflects change
+                showSaved();
+            } else {
+                setError(res.message || "Failed to update profile.");
+            }
+
         } else if (section === "Notifications") {
             const res = await updateSettings({ emailNotifications: emailN });
             if (res.success) {
@@ -90,8 +98,8 @@ export function SettingsContent({
                             type="button"
                             onClick={() => { setSection(t.k); setSaved(false); setError(""); }}
                             className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${section === t.k
-                                    ? "bg-orange-50 text-orange-600"
-                                    : "text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+                                ? "bg-orange-50 text-orange-600"
+                                : "text-stone-500 hover:bg-stone-100 hover:text-stone-700"
                                 }`}
                         >
                             {t.icon}
