@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Bell, Palette } from "lucide-react";
+import { User as UserIcon, Bell, Palette } from "lucide-react";
 import { updateSettings, getSettings, updateUsers } from "../lib/api";
 
 type User = {
@@ -15,13 +15,31 @@ export function SettingsContent({
     user: User | null;
     setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }) {
+    // 1. Initial Local State
     const [name, setName] = useState(user?.name || "");
     const [email, setEmail] = useState(user?.email || "");
     const [emailN, setEmailN] = useState(true);
     const [section, setSection] = useState("Profile");
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
+    const [isMounted, setIsMounted] = useState(false);
 
+    // 2. Fix for Minified Error #418 (Hydration Mismatch)
+    // This ensures the component only renders logic-heavy parts on the client.
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    // 3. Sync Local State with Parent State
+    // Without this, when you call setUser(), the inputs won't update!
+    useEffect(() => {
+        if (user) {
+            setName(user.name);
+            setEmail(user.email);
+        }
+    }, [user]);
+
+    // 4. Fetch Initial Settings
     useEffect(() => {
         const fetchSettings = async () => {
             const res = await getSettings();
@@ -46,9 +64,10 @@ export function SettingsContent({
                 return;
             }
 
-            const res = await updateUsers(name, email); // ✅ actually call the API
+            const res = await updateUsers(name, email);
             if (res.success) {
-                setUser(res.data);  // ✅ update parent state so header also reflects change
+                // This updates the global 'user' object
+                setUser(res.data);
                 showSaved();
             } else {
                 setError(res.message || "Failed to update profile.");
@@ -64,6 +83,9 @@ export function SettingsContent({
         }
     };
 
+    // Prevent hydration errors by returning null (or a loader) until mounted
+    if (!isMounted) return null;
+
     const Toggle = ({ v, on }: { v: boolean; on: () => void }) => (
         <button
             type="button"
@@ -77,7 +99,7 @@ export function SettingsContent({
     );
 
     const tabs = [
-        { k: "Profile", icon: <User size={15} /> },
+        { k: "Profile", icon: <UserIcon size={15} /> },
         { k: "Notifications", icon: <Bell size={15} /> },
         { k: "Appearance", icon: <Palette size={15} /> },
     ];
@@ -118,84 +140,49 @@ export function SettingsContent({
                                     👤
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-stone-800">{name}</p>
-                                    <p className="text-xs text-stone-400">{email}</p>
+                                    {/* These now update immediately because of the [user] useEffect */}
+                                    <p className="font-semibold text-stone-800">{user?.name || name}</p>
+                                    <p className="text-xs text-stone-400">{user?.email || email}</p>
                                 </div>
                             </div>
                             <div className="h-px bg-stone-100" />
-                            {[
-                                { l: "Full Name", v: name, s: setName },
-                                { l: "Email Address", v: email, s: setEmail },
-                            ].map((f, i) => (
-                                <div key={i}>
-                                    <label className="block text-xs font-semibold text-stone-400 mb-1.5">
-                                        {f.l}
-                                    </label>
-                                    <input
-                                        value={f.v}
-                                        onChange={(e) => f.s(e.target.value)}
-                                        className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-300 transition"
-                                    />
-                                </div>
-                            ))}
+
+                            <div>
+                                <label className="block text-xs font-semibold text-stone-400 mb-1.5">Full Name</label>
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-300 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-stone-400 mb-1.5">Email Address</label>
+                                <input
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-orange-300 transition"
+                                />
+                            </div>
                         </div>
                     )}
 
                     {section === "Notifications" && (
                         <div className="bg-white rounded-2xl p-6 border border-stone-100 shadow-sm flex flex-col gap-4">
                             <h3 className="font-semibold text-stone-700 text-sm">Notification Preferences</h3>
-                            {[
-                                { l: "Email Notifications", d: "Receive updates via email", v: emailN, on: () => setEmailN((p) => !p) },
-                            ].map((n, i) => (
-                                <div key={i}>
-                                    <div className="flex items-center justify-between py-2">
-                                        <div>
-                                            <p className="text-sm font-medium text-stone-700">{n.l}</p>
-                                            <p className="text-xs text-stone-400">{n.d}</p>
-                                        </div>
-                                        <Toggle v={n.v} on={n.on} />
-                                    </div>
+                            <div className="flex items-center justify-between py-2">
+                                <div>
+                                    <p className="text-sm font-medium text-stone-700">Email Notifications</p>
+                                    <p className="text-xs text-stone-400">Receive updates via email</p>
                                 </div>
-                            ))}
+                                <Toggle v={emailN} on={() => setEmailN(!emailN)} />
+                            </div>
                         </div>
                     )}
 
                     {section === "Appearance" && (
                         <div className="bg-white rounded-2xl p-6 border border-stone-100 shadow-sm flex flex-col gap-5">
                             <h3 className="font-semibold text-stone-700 text-sm">Appearance</h3>
-                            <div>
-                                <label className="block text-xs font-semibold text-stone-400 mb-2">Theme</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                        { l: "Light", bg: "bg-white", active: true },
-                                        { l: "Dark", bg: "bg-stone-800", active: false },
-                                        { l: "System", bg: "bg-gradient-to-br from-white to-stone-800", active: false },
-                                    ].map((t, i) => (
-                                        <button
-                                            key={i}
-                                            type="button"
-                                            className={`rounded-xl border-2 p-3 flex flex-col items-center gap-2 transition-all ${t.active ? "border-orange-400" : "border-stone-200 hover:border-stone-300"
-                                                }`}
-                                        >
-                                            <div className={`w-10 h-7 rounded-lg ${t.bg} border border-stone-200`} />
-                                            <span className="text-xs font-medium text-stone-600">{t.l}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-stone-400 mb-2">Accent Color</label>
-                                <div className="flex gap-2">
-                                    {["bg-orange-400", "bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-rose-500"].map((c, i) => (
-                                        <button
-                                            key={i}
-                                            type="button"
-                                            className={`w-8 h-8 rounded-full ${c} hover:scale-110 transition-transform ${i === 0 ? "ring-2 ring-offset-2 ring-orange-400" : ""
-                                                }`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
+                            <p className="text-xs text-stone-400 italic">Appearance settings are currently read-only.</p>
                         </div>
                     )}
 
